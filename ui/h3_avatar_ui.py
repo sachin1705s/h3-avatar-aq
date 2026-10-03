@@ -12,6 +12,7 @@ import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.error import URLError
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
 
@@ -47,23 +48,32 @@ def run(cmd: list[str], cwd: Path = ROOT) -> str:
 
 def post_json(url: str, payload: dict) -> dict:
     data = json.dumps(payload).encode("utf-8")
-    request = Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
-    try:
-        with urlopen(request, timeout=4 * 60 * 60) as response:
+    headers = {"Content-Type": "application/json"}
+
+    def send(context: ssl.SSLContext | None = None) -> dict:
+        request = Request(url, data=data, headers=headers, method="POST")
+        with urlopen(request, timeout=4 * 60 * 60, context=context) as response:
             return json.loads(response.read().decode("utf-8"))
-    except ssl.SSLCertVerificationError:
+
+    try:
+        return send()
+    except (ssl.SSLCertVerificationError, URLError) as exc:
+        is_cert_error = isinstance(exc, ssl.SSLCertVerificationError) or isinstance(
+            getattr(exc, "reason", None),
+            ssl.SSLCertVerificationError,
+        )
+        if not is_cert_error:
+            raise
         try:
             import certifi
 
             context = ssl.create_default_context(cafile=certifi.where())
-            with urlopen(request, timeout=4 * 60 * 60, context=context) as response:
-                return json.loads(response.read().decode("utf-8"))
+            return send(context)
         except Exception:
             context = ssl._create_unverified_context()
-            with urlopen(request, timeout=4 * 60 * 60, context=context) as response:
-                result = json.loads(response.read().decode("utf-8"))
-                result["ssl_warning"] = "Used local-dev unverified HTTPS fallback"
-                return result
+            result = send(context)
+            result["ssl_warning"] = "Used local-dev unverified HTTPS fallback"
+            return result
 
 
 def parse_multipart(content_type: str, body: bytes) -> tuple[dict[str, str], dict[str, tuple[str, bytes]]]:
