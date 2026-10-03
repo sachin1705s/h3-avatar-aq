@@ -1479,12 +1479,16 @@ class H3WarmRef2VAGenerator:
 
     @modal.method()
     def generate(self, payload: dict) -> dict:
+        import base64
+        import uuid
+
         from diffusers.modular_pipelines.minimax_h3 import MiniMaxH3Reference
         from diffusers.utils.export_utils import encode_video
 
         checkpoint = payload.get("checkpoint") or "/runs/h3/locked/h3-avatar-audio-v2-step1000.pt"
         reference_video = payload.get("reference_video")
-        output_path = payload.get("output_path")
+        reference_video_b64 = payload.get("reference_video_b64")
+        output_path = payload.get("output_path") or f"/tmp/h3_warm_outputs/{uuid.uuid4()}/generated.mp4"
         prompt = payload.get("prompt") or "The same character faces the camera and speaks with an audible natural voice."
         num_frames = int(payload.get("num_frames", 124))
         height = int(payload.get("height", 512))
@@ -1494,10 +1498,14 @@ class H3WarmRef2VAGenerator:
         include_reference_audio = bool(payload.get("include_reference_audio", False))
         generate_audio = bool(payload.get("generate_audio", True))
 
+        if reference_video_b64:
+            ref_dir = Path("/tmp/h3_warm_refs") / str(uuid.uuid4())
+            ref_dir.mkdir(parents=True, exist_ok=True)
+            ref_path = ref_dir / "reference.mp4"
+            ref_path.write_bytes(base64.b64decode(reference_video_b64))
+            reference_video = str(ref_path)
         if not reference_video:
             raise RuntimeError("reference_video is required")
-        if not output_path:
-            raise RuntimeError("output_path is required")
         ref = Path(reference_video)
         out = Path(output_path)
         if not ref.is_file():
@@ -1533,8 +1541,9 @@ class H3WarmRef2VAGenerator:
             )
         else:
             encode_video(results["videos"][0], fps=24, output_path=str(out))
-        RUNS_VOL.commit()
-        return {
+        if str(out).startswith("/runs/"):
+            RUNS_VOL.commit()
+        response = {
             "checkpoint": str(checkpoint),
             "reference_video": str(ref),
             "output_path": str(out),
@@ -1550,6 +1559,9 @@ class H3WarmRef2VAGenerator:
             "missing_key_count": self.missing_key_count,
             "warm": True,
         }
+        if payload.get("return_video_b64"):
+            response["video_b64"] = base64.b64encode(out.read_bytes()).decode("ascii")
+        return response
 
 
 @app.function(image=image, volumes=VOLS, cpu=2.0, memory=4096, timeout=4 * 60 * 60)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import base64
 import json
 import os
 import re
@@ -128,6 +129,12 @@ def generate_job(job_id: str, image_path: Path, fields: dict[str, str]) -> None:
             "The same character faces the camera and speaks with an audible natural voice, "
             "expressive synchronized mouth movement, subtle head motion, and a friendly expression."
         )
+        dialogue = fields.get("dialogue", "").strip()
+        if dialogue:
+            prompt = f'{prompt} Make the character say: "{dialogue}".'
+        background = fields.get("background", "").strip()
+        if background:
+            prompt = f"{prompt} The scene is set {background}."
 
         job_dir = JOBS / job_id
         ref = job_dir / "reference_512.mp4"
@@ -143,15 +150,12 @@ def generate_job(job_id: str, image_path: Path, fields: dict[str, str]) -> None:
             "-an", str(ref),
         ])
 
-        set_status(job_id, state="uploading", detail="Uploading reference to Modal", progress=10)
-        run(["modal", "volume", "put", "--force", "h3-avatar-runs", str(ref), remote_ref])
-
-        set_status(job_id, state="generating", detail="Running H3 generation on Modal", progress=20)
         if WARM_ENDPOINT_URL:
+            set_status(job_id, state="uploading", detail="Sending reference to warm endpoint", progress=10)
             payload = {
                 "checkpoint": checkpoint,
-                "reference_video": f"/runs{remote_ref}",
-                "output_path": container_out,
+                "reference_video_b64": base64.b64encode(ref.read_bytes()).decode("ascii"),
+                "output_path": f"/tmp/h3_ui/{job_id}/generated.mp4",
                 "prompt": prompt,
                 "num_frames": frames,
                 "height": 512,
@@ -160,10 +164,20 @@ def generate_job(job_id: str, image_path: Path, fields: dict[str, str]) -> None:
                 "seed": int(fields.get("seed", "1500")),
                 "include_reference_audio": False,
                 "generate_audio": generate_audio,
+                "return_video_b64": True,
             }
+            set_status(job_id, state="generating", detail="Running H3 generation on Modal", progress=20)
             result = post_json(WARM_ENDPOINT_URL, payload)
+            video_b64 = result.pop("video_b64", "")
             (job_dir / "modal.log").write_text(json.dumps(result, indent=2), encoding="utf-8")
+            if not video_b64:
+                raise RuntimeError("warm endpoint did not return video data")
+            set_status(job_id, state="downloading", detail="Receiving MP4", progress=90)
+            local_out.write_bytes(base64.b64decode(video_b64))
         else:
+            set_status(job_id, state="uploading", detail="Uploading reference to Modal", progress=10)
+            run(["modal", "volume", "put", "--force", "h3-avatar-runs", str(ref), remote_ref])
+            set_status(job_id, state="generating", detail="Running H3 generation on Modal", progress=20)
             cmd = [
                 "modal", "run", "modal_h3_avatar.py::generate_ref2va_sample",
                 "--checkpoint", checkpoint,
@@ -181,8 +195,8 @@ def generate_job(job_id: str, image_path: Path, fields: dict[str, str]) -> None:
             modal_log = run(cmd)
             (job_dir / "modal.log").write_text(modal_log, encoding="utf-8")
 
-        set_status(job_id, state="downloading", detail="Downloading MP4", progress=90)
-        run(["modal", "volume", "get", "--force", "h3-avatar-runs", remote_out, str(job_dir) + "/"])
+            set_status(job_id, state="downloading", detail="Downloading MP4", progress=90)
+            run(["modal", "volume", "get", "--force", "h3-avatar-runs", remote_out, str(job_dir) + "/"])
         downloaded = job_dir / "generated.mp4"
         if not downloaded.exists():
             matches = list(job_dir.glob("*generated*.mp4"))
@@ -211,8 +225,9 @@ HTML = """<!doctype html>
     form { padding:22px; }
     .result { padding:22px; display:flex; flex-direction:column; min-height:620px; }
     label { display:block; margin:18px 0 8px; color:#d9e0eb; font-size:13px; font-weight:700; }
-    textarea, button { width:100%; border-radius:7px; font:inherit; }
-    textarea { min-height:180px; resize:vertical; border:1px solid var(--line); background:#0c1017; color:var(--text); padding:14px; line-height:1.45; }
+    textarea, button, input[type="text"] { width:100%; border-radius:7px; font:inherit; }
+    textarea { min-height:112px; resize:vertical; border:1px solid var(--line); background:#0c1017; color:var(--text); padding:14px; line-height:1.45; }
+    input[type="text"] { border:1px solid var(--line); background:#0c1017; color:var(--text); padding:12px; }
     textarea:focus, .upload:focus-within { outline:2px solid rgba(107,200,255,.42); outline-offset:2px; }
     button { margin-top:18px; background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#061018; border:0; padding:14px 16px; font-weight:800; cursor:pointer; }
     button:disabled { opacity:.65; cursor:wait; }
@@ -222,6 +237,13 @@ HTML = """<!doctype html>
     .upload strong { display:block; color:#f8fbff; font-size:17px; margin-bottom:6px; }
     .upload span { display:block; color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
     .locked { margin:16px 0 0; padding:12px; border:1px solid #314458; border-radius:8px; background:#101822; color:#b7c7d9; font-size:13px; }
+    .background-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .bg-card { border:1px solid var(--line); background:#0d121a; color:#dfe7f3; border-radius:8px; padding:12px; text-align:left; cursor:pointer; }
+    .bg-card[aria-pressed="true"] { border-color:var(--accent); background:#112231; box-shadow:inset 0 0 0 1px rgba(107,200,255,.45); }
+    .bg-card strong { display:block; font-size:13px; margin-bottom:4px; color:#f8fbff; }
+    .bg-card span { display:block; color:var(--muted); font-size:12px; line-height:1.35; }
+    .custom-bg { margin-top:10px; display:none; }
+    .custom-bg.active { display:block; }
     .bar { height:10px; background:#0c0e13; border-radius:999px; overflow:hidden; border:1px solid var(--line); margin:18px 0 4px; }
     .fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent), var(--accent2)); transition:width .3s ease; }
     .pill { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:5px 10px; color:#cbd3df; font-size:12px; text-transform:capitalize; }
@@ -246,8 +268,35 @@ HTML = """<!doctype html>
           <span id="fileName">PNG, JPG, or JPEG</span>
         </span>
       </label>
-      <label>Prompt</label>
-      <textarea name="prompt">Make the character say: "Hey Chandan, wassup yaar, how are you doing these days?"</textarea>
+      <label>Dialogue</label>
+      <textarea name="dialogue">Hey Chandan, wassup yaar, how are you doing these days?</textarea>
+      <label>Direction</label>
+      <textarea name="prompt">The same character faces the camera and speaks with an audible natural voice, expressive synchronized mouth movement, subtle head motion, and a friendly expression.</textarea>
+      <label>Background</label>
+      <input id="background" name="background" type="hidden" value="in a clean studio with soft cinematic lighting">
+      <div class="background-grid" id="backgroundGrid">
+        <button class="bg-card" type="button" aria-pressed="true" data-bg="in a clean studio with soft cinematic lighting">
+          <strong>Studio</strong><span>Soft light, clean backdrop</span>
+        </button>
+        <button class="bg-card" type="button" aria-pressed="false" data-bg="inside a modern news studio with subtle screens in the background">
+          <strong>Newsroom</strong><span>Modern broadcast desk feel</span>
+        </button>
+        <button class="bg-card" type="button" aria-pressed="false" data-bg="in a cozy room with warm lamps and shelves behind them">
+          <strong>Cozy Room</strong><span>Warm indoor setting</span>
+        </button>
+        <button class="bg-card" type="button" aria-pressed="false" data-bg="on a city street at night with colorful lights behind them">
+          <strong>City Night</strong><span>Neon evening backdrop</span>
+        </button>
+        <button class="bg-card" type="button" aria-pressed="false" data-bg="near a bright beach with blue sky and soft sunlight">
+          <strong>Beach</strong><span>Bright outdoor scene</span>
+        </button>
+        <button class="bg-card" type="button" aria-pressed="false" data-bg="custom">
+          <strong>Custom</strong><span>Type your own background</span>
+        </button>
+      </div>
+      <div class="custom-bg" id="customBgWrap">
+        <input id="customBg" type="text" placeholder="e.g. inside a spaceship control room">
+      </div>
       <div class="locked">Locked settings: audio-v2 LoRA, model-generated audio, 10 second clip, 30 inference steps.</div>
       <button type="submit">Generate Video</button>
     </form>
@@ -268,6 +317,10 @@ HTML = """<!doctype html>
 const form = document.getElementById('form');
 const imageInput = document.getElementById('image');
 const fileName = document.getElementById('fileName');
+const backgroundInput = document.getElementById('background');
+const backgroundGrid = document.getElementById('backgroundGrid');
+const customBgWrap = document.getElementById('customBgWrap');
+const customBg = document.getElementById('customBg');
 const state = document.getElementById('state');
 const detail = document.getElementById('detail');
 const fill = document.getElementById('fill');
@@ -277,6 +330,27 @@ const empty = document.getElementById('empty');
 let timer = null;
 imageInput.addEventListener('change', () => {
   fileName.textContent = imageInput.files.length ? imageInput.files[0].name : 'PNG, JPG, or JPEG';
+});
+function setBackground(value) {
+  if (value === 'custom') {
+    customBgWrap.classList.add('active');
+    backgroundInput.value = customBg.value.trim();
+    customBg.focus();
+  } else {
+    customBgWrap.classList.remove('active');
+    backgroundInput.value = value;
+  }
+}
+backgroundGrid.addEventListener('click', (event) => {
+  const card = event.target.closest('.bg-card');
+  if (!card) return;
+  document.querySelectorAll('.bg-card').forEach((item) => item.setAttribute('aria-pressed', 'false'));
+  card.setAttribute('aria-pressed', 'true');
+  setBackground(card.dataset.bg);
+});
+customBg.addEventListener('input', () => {
+  const customSelected = document.querySelector('.bg-card[aria-pressed="true"]')?.dataset.bg === 'custom';
+  if (customSelected) backgroundInput.value = customBg.value.trim();
 });
 function render(s) {
   state.textContent = s.state || 'unknown';
