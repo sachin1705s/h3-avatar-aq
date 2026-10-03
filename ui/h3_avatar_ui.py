@@ -5,6 +5,7 @@ import json
 import os
 import re
 import shutil
+import ssl
 import subprocess
 import threading
 import time
@@ -47,8 +48,22 @@ def run(cmd: list[str], cwd: Path = ROOT) -> str:
 def post_json(url: str, payload: dict) -> dict:
     data = json.dumps(payload).encode("utf-8")
     request = Request(url, data=data, headers={"Content-Type": "application/json"}, method="POST")
-    with urlopen(request, timeout=4 * 60 * 60) as response:
-        return json.loads(response.read().decode("utf-8"))
+    try:
+        with urlopen(request, timeout=4 * 60 * 60) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except ssl.SSLCertVerificationError:
+        try:
+            import certifi
+
+            context = ssl.create_default_context(cafile=certifi.where())
+            with urlopen(request, timeout=4 * 60 * 60, context=context) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except Exception:
+            context = ssl._create_unverified_context()
+            with urlopen(request, timeout=4 * 60 * 60, context=context) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                result["ssl_warning"] = "Used local-dev unverified HTTPS fallback"
+                return result
 
 
 def parse_multipart(content_type: str, body: bytes) -> tuple[dict[str, str], dict[str, tuple[str, bytes]]]:
