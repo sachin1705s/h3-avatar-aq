@@ -18,5 +18,4 @@ This directory contains the locked MiniMax-H3 Ref2VA LoRA adapter:
 
 This checkpoint was selected after generated samples showed usable English model audio, improved lip sync, and stable visual identity. The key change was training with prompts that include the actual ASR transcript text, instead of only generic English speech captions.
 
-See `recipes/locked_h3_avatar_checkpoint.md` for the full locked recipe and known-good sample paths.
-
+The partner-ready LoRA-only export is available at `partner_bundle/adapter_model.safetensors`.

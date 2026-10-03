@@ -1,4 +1,0 @@
-index,seed,identity,talking_motion,audio_sync,prompt_following,generalization,overall,notes,reference_path,generated_path
-0,208000,,,,,,,,artifacts/generated/ref2va-lora-full-8000/eval_ckpt_8000_diverse3/000_clip_00041.mp4,artifacts/generated/ref2va-lora-full-8000/eval_ckpt_8000_diverse3/000_000_clip_00041_generated.mp4
-1,208001,,,,,,,,artifacts/generated/ref2va-lora-full-8000/eval_ckpt_8000_diverse3/001_clip_02048.mp4,artifacts/generated/ref2va-lora-full-8000/eval_ckpt_8000_diverse3/001_001_clip_02048_generated.mp4
-2,208002,,,,,,,,artifacts/generated/ref2va-lora-full-8000/eval_ckpt_8000_diverse3/002_clip_04721.mp4,artifacts/generated/ref2va-lora-full-8000/eval_ckpt_8000_diverse3/002_002_clip_04721_generated.mp4

@@ -1,6 +1,0 @@
-index,seed,identity,talking_motion,audio_sync,prompt_following,generalization,overall,notes,reference_path,generated_path
-0,100,,,,,,,,artifacts/references/ta20_val_eval_clips/000_clip_00338.mp4,artifacts/generated/ref2va-lora-smoke-100/eval_batch_001/000_000_clip_00338_generated.mp4
-1,101,,,,,,,,artifacts/references/ta20_val_eval_clips/001_clip_07973.mp4,artifacts/generated/ref2va-lora-smoke-100/eval_batch_001/001_001_clip_07973_generated.mp4
-2,102,,,,,,,,artifacts/references/ta20_val_eval_clips/002_clip_02834.mp4,artifacts/generated/ref2va-lora-smoke-100/eval_batch_001/002_002_clip_02834_generated.mp4
-3,103,,,,,,,,artifacts/references/ta20_val_eval_clips/003_clip_07127.mp4,artifacts/generated/ref2va-lora-smoke-100/eval_batch_001/003_003_clip_07127_generated.mp4
-4,104,,,,,,,,artifacts/references/ta20_val_eval_clips/004_clip_03414.mp4,artifacts/generated/ref2va-lora-smoke-100/eval_batch_001/004_004_clip_03414_generated.mp4
