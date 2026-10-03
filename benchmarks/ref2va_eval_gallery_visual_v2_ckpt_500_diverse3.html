@@ -1,0 +1,150 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>H3 Ref2VA Eval Batch</title>
+<style>
+body {
+  margin: 0;
+  background: #101214;
+  color: #eef2f6;
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 22px 48px;
+}
+h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 720;
+}
+.sub {
+  color: #aab4c0;
+  margin: 0 0 22px;
+}
+.pair {
+  border-top: 1px solid #2e3641;
+  padding: 22px 0 26px;
+}
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.meta {
+  color: #aab4c0;
+  font-size: 13px;
+}
+.videos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+h3 {
+  margin: 0 0 8px;
+  color: #cbd5df;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: #050607;
+  border: 1px solid #303843;
+  border-radius: 6px;
+}
+p {
+  margin: 8px 0 0;
+  color: #aab4c0;
+  overflow-wrap: anywhere;
+}
+a {
+  color: #8ecaff;
+}
+.prompt {
+  margin-top: 12px;
+  color: #d7dde5;
+}
+@media (max-width: 760px) {
+  header, .videos {
+    display: block;
+  }
+  section + section {
+    margin-top: 16px;
+  }
+}
+</style>
+<main>
+  <h1>H3 Ref2VA Eval Batch</h1>
+  <p class="sub">Checkpoint: checkpoint-500.pt · Missing base keys while loading LoRA: 638 · Items: 3</p>
+  
+<article class="pair">
+  <header>
+    <h2>Sample 0</h2>
+    <div class="meta">seed 500 · 124 frames · 512x512 · 30 inference steps</div>
+  </header>
+  <div class="videos">
+    <section>
+      <h3>Reference</h3>
+      <video src="../artifacts/samples/ta20_full_test_eval_diverse3/000_clip_00041.mp4" controls muted autoplay loop playsinline preload="metadata"></video>
+      <p><a href="../artifacts/samples/ta20_full_test_eval_diverse3/000_clip_00041.mp4">Open MP4</a> · 000_clip_00041.mp4</p>
+    </section>
+    <section>
+      <h3>Generated</h3>
+      <video src="../artifacts/generated/ref2va-lora-visual-v2-1k-384-r16/eval_ckpt_500_diverse3/000_000_clip_00041_generated.mp4" controls muted autoplay loop playsinline preload="metadata"></video>
+      <p><a href="../artifacts/generated/ref2va-lora-visual-v2-1k-384-r16/eval_ckpt_500_diverse3/000_000_clip_00041_generated.mp4">Open MP4</a> · 000_000_clip_00041_generated.mp4 · 188,245 bytes</p>
+    </section>
+  </div>
+  <p class="prompt">The same animated character talks directly to the camera with natural lip movement and a friendly expression.</p>
+</article>
+
+<article class="pair">
+  <header>
+    <h2>Sample 1</h2>
+    <div class="meta">seed 501 · 124 frames · 512x512 · 30 inference steps</div>
+  </header>
+  <div class="videos">
+    <section>
+      <h3>Reference</h3>
+      <video src="../artifacts/samples/ta20_full_test_eval_diverse3/001_clip_02048.mp4" controls muted autoplay loop playsinline preload="metadata"></video>
+      <p><a href="../artifacts/samples/ta20_full_test_eval_diverse3/001_clip_02048.mp4">Open MP4</a> · 001_clip_02048.mp4</p>
+    </section>
+    <section>
+      <h3>Generated</h3>
+      <video src="../artifacts/generated/ref2va-lora-visual-v2-1k-384-r16/eval_ckpt_500_diverse3/001_001_clip_02048_generated.mp4" controls muted autoplay loop playsinline preload="metadata"></video>
+      <p><a href="../artifacts/generated/ref2va-lora-visual-v2-1k-384-r16/eval_ckpt_500_diverse3/001_001_clip_02048_generated.mp4">Open MP4</a> · 001_001_clip_02048_generated.mp4 · 378,536 bytes</p>
+    </section>
+  </div>
+  <p class="prompt">The same animated character talks directly to the camera with natural lip movement and a friendly expression.</p>
+</article>
+
+<article class="pair">
+  <header>
+    <h2>Sample 2</h2>
+    <div class="meta">seed 502 · 124 frames · 512x512 · 30 inference steps</div>
+  </header>
+  <div class="videos">
+    <section>
+      <h3>Reference</h3>
+      <video src="../artifacts/samples/ta20_full_test_eval_diverse3/002_clip_04721.mp4" controls muted autoplay loop playsinline preload="metadata"></video>
+      <p><a href="../artifacts/samples/ta20_full_test_eval_diverse3/002_clip_04721.mp4">Open MP4</a> · 002_clip_04721.mp4</p>
+    </section>
+    <section>
+      <h3>Generated</h3>
+      <video src="../artifacts/generated/ref2va-lora-visual-v2-1k-384-r16/eval_ckpt_500_diverse3/002_002_clip_04721_generated.mp4" controls muted autoplay loop playsinline preload="metadata"></video>
+      <p><a href="../artifacts/generated/ref2va-lora-visual-v2-1k-384-r16/eval_ckpt_500_diverse3/002_002_clip_04721_generated.mp4">Open MP4</a> · 002_002_clip_04721_generated.mp4 · 198,140 bytes</p>
+    </section>
+  </div>
+  <p class="prompt">The same animated character talks directly to the camera with natural lip movement and a friendly expression.</p>
+</article>
+
+</main>
