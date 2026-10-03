@@ -46,6 +46,7 @@ image = (
         "deepspeed",
         "diffusers @ git+https://github.com/huggingface/diffusers.git@abc5e9bf71fd38f53cd471bc3acaa84bc5ecbfdc",
         "einops",
+        "fastapi[standard]",
         "huggingface-hub",
         "numpy",
         "opencv-python-headless",
