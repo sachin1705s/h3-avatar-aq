@@ -23,8 +23,6 @@ JOBS.mkdir(parents=True, exist_ok=True)
 
 CHECKPOINTS = {
     "audio-v2": "/runs/h3/locked/h3-avatar-audio-v2-step1000.pt",
-    "audio-v1": "/runs/h3/ref2va-lora-audio-v1-en-384-56-r16/checkpoint-1500.pt",
-    "visual-v2": "/runs/h3/ref2va-lora-visual-v2-1k-384-r16/checkpoint-1500.pt",
 }
 
 STATUS: dict[str, dict] = {}
@@ -240,12 +238,6 @@ HTML = """<!doctype html>
           <select name="steps"><option value="30">30</option><option value="16">16 preview</option></select>
         </div>
       </div>
-      <label>Checkpoint</label>
-      <select name="checkpoint">
-        <option value="audio-v2" selected>Audio-v2 transcript LoRA, locked</option>
-        <option value="audio-v1">Audio-v1 LoRA, model audio</option>
-        <option value="visual-v2">Visual-v2 LoRA, experimental audio</option>
-      </select>
       <label>Audio</label>
       <select name="audio">
         <option value="model">H3 model-generated audio</option>
