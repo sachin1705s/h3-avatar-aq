@@ -200,71 +200,84 @@ HTML = """<!doctype html>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>H3 Avatar Studio</title>
   <style>
-    :root { color-scheme: dark; --bg:#0f1115; --panel:#171a21; --line:#2b313d; --text:#f4f6fb; --muted:#9aa4b2; --accent:#57c7ff; }
+    :root { color-scheme: dark; --bg:#0d1016; --panel:#171b23; --panel2:#11151d; --line:#2a3240; --text:#f6f8fc; --muted:#99a3b3; --accent:#6bc8ff; --accent2:#a8f0cf; }
     * { box-sizing: border-box; }
-    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background:var(--bg); color:var(--text); }
-    main { max-width:1180px; margin:0 auto; padding:28px; display:grid; grid-template-columns: 400px 1fr; gap:24px; }
-    h1 { font-size:24px; margin:0 0 6px; }
-    p { color:var(--muted); line-height:1.45; }
-    form, .result { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:18px; }
-    label { display:block; margin:14px 0 6px; color:#cbd3df; font-size:13px; }
-    input, textarea, select, button { width:100%; border-radius:6px; border:1px solid var(--line); background:#0f1218; color:var(--text); padding:10px; font:inherit; }
-    textarea { min-height:96px; resize:vertical; }
-    button { margin-top:18px; background:var(--accent); color:#061018; border:0; font-weight:700; cursor:pointer; }
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif; background:radial-gradient(circle at top left, #172233 0, #0d1016 380px); color:var(--text); }
+    main { min-height:100vh; max-width:1240px; margin:0 auto; padding:36px; display:grid; grid-template-columns: 420px 1fr; gap:28px; align-items:stretch; }
+    h1 { font-size:34px; line-height:1; margin:0 0 10px; letter-spacing:0; }
+    p { color:var(--muted); line-height:1.5; }
+    .intro { margin:0 0 24px; max-width:32rem; font-size:16px; }
+    form, .result { background:rgba(23, 27, 35, .92); border:1px solid var(--line); border-radius:8px; box-shadow:0 24px 80px rgba(0,0,0,.28); }
+    form { padding:22px; }
+    .result { padding:22px; display:flex; flex-direction:column; min-height:620px; }
+    label { display:block; margin:18px 0 8px; color:#d9e0eb; font-size:13px; font-weight:700; }
+    textarea, button { width:100%; border-radius:7px; font:inherit; }
+    textarea { min-height:180px; resize:vertical; border:1px solid var(--line); background:#0c1017; color:var(--text); padding:14px; line-height:1.45; }
+    textarea:focus, .upload:focus-within { outline:2px solid rgba(107,200,255,.42); outline-offset:2px; }
+    button { margin-top:18px; background:linear-gradient(135deg, var(--accent), var(--accent2)); color:#061018; border:0; padding:14px 16px; font-weight:800; cursor:pointer; }
+    button:disabled { opacity:.65; cursor:wait; }
     video { width:100%; max-height:72vh; background:#050608; border:1px solid var(--line); border-radius:8px; }
-    .row { display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
-    .bar { height:10px; background:#0c0e13; border-radius:999px; overflow:hidden; border:1px solid var(--line); }
-    .fill { height:100%; width:0%; background:var(--accent); transition:width .3s ease; }
-    .pill { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:4px 8px; color:#cbd3df; font-size:12px; }
-    .warn { color:#f4c56a; }
-    @media (max-width: 860px) { main { grid-template-columns:1fr; padding:16px; } }
+    .upload { display:grid; place-items:center; min-height:180px; padding:18px; border:1px dashed #405066; border-radius:8px; background:var(--panel2); cursor:pointer; text-align:center; }
+    .upload input { position:absolute; inline-size:1px; block-size:1px; opacity:0; pointer-events:none; }
+    .upload strong { display:block; color:#f8fbff; font-size:17px; margin-bottom:6px; }
+    .upload span { display:block; color:var(--muted); font-size:13px; overflow-wrap:anywhere; }
+    .locked { margin:16px 0 0; padding:12px; border:1px solid #314458; border-radius:8px; background:#101822; color:#b7c7d9; font-size:13px; }
+    .bar { height:10px; background:#0c0e13; border-radius:999px; overflow:hidden; border:1px solid var(--line); margin:18px 0 4px; }
+    .fill { height:100%; width:0%; background:linear-gradient(90deg, var(--accent), var(--accent2)); transition:width .3s ease; }
+    .pill { display:inline-block; border:1px solid var(--line); border-radius:999px; padding:5px 10px; color:#cbd3df; font-size:12px; text-transform:capitalize; }
+    .result-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .result-title { margin:0; color:#f5f8fc; font-weight:800; }
+    .empty { flex:1; display:grid; place-items:center; border:1px solid var(--line); border-radius:8px; background:#0a0d12; margin-top:18px; min-height:360px; color:#717c8d; text-align:center; padding:24px; }
+    #job { font-size:12px; overflow-wrap:anywhere; }
+    @media (max-width: 900px) { main { grid-template-columns:1fr; padding:18px; } .result { min-height:420px; } h1 { font-size:30px; } }
   </style>
 </head>
 <body>
 <main>
   <section>
     <h1>H3 Avatar Studio</h1>
-    <p>Upload one reference image and generate a talking avatar clip on Modal.</p>
+    <p class="intro">Upload a character image, write what it should say, and generate a talking avatar clip with the locked H3 LoRA.</p>
     <form id="form">
       <label>Reference Image</label>
-      <input name="image" type="file" accept="image/*" required>
-      <div class="row">
-        <div>
-          <label>Duration</label>
-          <select name="duration"><option value="10">~10 sec</option><option value="5">~5 sec</option></select>
-        </div>
-        <div>
-          <label>Steps</label>
-          <select name="steps"><option value="30">30</option><option value="16">16 preview</option></select>
-        </div>
-      </div>
-      <label>Audio</label>
-      <select name="audio">
-        <option value="model">H3 model-generated audio</option>
-        <option value="none">No audio</option>
-      </select>
-      <p class="warn">Locked checkpoint: audio-v2 step 1000. Warm endpoint is used when configured.</p>
+      <label class="upload">
+        <input id="image" name="image" type="file" accept="image/*" required>
+        <span>
+          <strong>Choose a reference image</strong>
+          <span id="fileName">PNG, JPG, or JPEG</span>
+        </span>
+      </label>
       <label>Prompt</label>
-      <textarea name="prompt">The same character faces the camera and speaks with an audible natural voice, expressive synchronized mouth movement, subtle head motion, and a friendly expression.</textarea>
+      <textarea name="prompt">Make the character say: "Hey Chandan, wassup yaar, how are you doing these days?"</textarea>
+      <div class="locked">Locked settings: audio-v2 LoRA, model-generated audio, 10 second clip, 30 inference steps.</div>
       <button type="submit">Generate Video</button>
     </form>
   </section>
   <section class="result">
-    <div><span class="pill" id="state">idle</span></div>
+    <div class="result-head">
+      <p class="result-title">Generation</p>
+      <span class="pill" id="state">idle</span>
+    </div>
     <p id="detail">Upload an image to start.</p>
     <div class="bar"><div class="fill" id="fill"></div></div>
     <p id="job"></p>
     <video id="video" controls playsinline hidden></video>
+    <div class="empty" id="empty">Your generated clip will appear here.</div>
   </section>
 </main>
 <script>
 const form = document.getElementById('form');
+const imageInput = document.getElementById('image');
+const fileName = document.getElementById('fileName');
 const state = document.getElementById('state');
 const detail = document.getElementById('detail');
 const fill = document.getElementById('fill');
 const jobEl = document.getElementById('job');
 const video = document.getElementById('video');
+const empty = document.getElementById('empty');
 let timer = null;
+imageInput.addEventListener('change', () => {
+  fileName.textContent = imageInput.files.length ? imageInput.files[0].name : 'PNG, JPG, or JPEG';
+});
 function render(s) {
   state.textContent = s.state || 'unknown';
   detail.textContent = s.detail || '';
@@ -272,6 +285,7 @@ function render(s) {
   if (s.job_id) jobEl.textContent = `job ${s.job_id}`;
   if (s.video_url) {
     video.hidden = false;
+    empty.hidden = true;
     video.src = `${s.video_url}?t=${Date.now()}`;
   }
 }
@@ -284,6 +298,7 @@ async function poll(id) {
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   video.hidden = true;
+  empty.hidden = false;
   const data = new FormData(form);
   render({state:'starting', detail:'Submitting job', progress:1});
   const r = await fetch('/api/generate', {method:'POST', body:data});

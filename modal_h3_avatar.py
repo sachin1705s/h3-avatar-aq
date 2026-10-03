@@ -62,7 +62,18 @@ image = (
         "transformers",
         "tqdm",
     )
-    .add_local_dir(".", "/root/h3-avatar-aq")
+    .add_local_dir(
+        ".",
+        "/root/h3-avatar-aq",
+        ignore=[
+            ".git/**",
+            ".venv/**",
+            "__pycache__/**",
+            "artifacts/**",
+            "data/**",
+            "tmp/**",
+        ],
+    )
 )
 
 app = modal.App(APP_NAME, image=image)
