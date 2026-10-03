@@ -1,76 +1,108 @@
 # H3 Avatar
 
-Locked MiniMax-H3 Ref2VA LoRA for single-image talking-avatar generation with model-generated audio.
+Single-image talking-avatar generation powered by a locked MiniMax-H3 Ref2VA LoRA.
 
-## What Is Included
+![H3 Avatar demo frame](docs/demo.jpg)
 
-- `models/locked/h3-avatar-audio-v2-step1000.pt`  
-  Original locked training checkpoint, including optimizer state.
-- `partner_bundle/adapter_model.safetensors`  
-  Clean LoRA-only adapter export for hosting partners.
-- `partner_bundle/adapter_config.json`  
-  LoRA architecture and base-model compatibility notes.
-- `partner_bundle/inference_config.json`  
-  Default request/serving parameters.
-- `modal_h3_avatar.py`  
-  Current Modal reference serving implementation.
-- `ui/h3_avatar_ui.py`  
-  Local UI for reference image, dialogue, direction, and background.
+## Product Shape
 
-## Locked Model
+The app takes:
 
-- Base model: MiniMax-H3 Ref2VA
-- Adapter type: LoRA
-- Rank: 16
-- Alpha: 32
-- Target modules: `to_qkv`, `to_out.0`, `linear_1`, `linear_2`
-- Trainable params: 10,655,744
-- Training data: 385 training clips from 481 accepted transcript-conditioned clips
-- Training length: 1000 optimizer steps, about 2.6 train-set passes
-- Training cache: 384x384, 56 frames
+- a reference image
+- dialogue for the character to say
+- direction for expression, motion, and camera behavior
+- a background preset or custom background
 
-## Local UI
+The model recipe is locked behind the UI so users do not need to choose checkpoints, steps, audio mode, or model variants.
+
+## Model
+
+| Item | Value |
+| --- | --- |
+| Base | MiniMax-H3 Ref2VA |
+| Adapter | LoRA |
+| Rank / alpha | `16 / 32` |
+| Target modules | `to_qkv`, `to_out.0`, `linear_1`, `linear_2` |
+| Trainable params | `10,655,744` |
+| Locked checkpoint | `models/locked/h3-avatar-audio-v2-step1000.pt` |
+| Partner weights | `partner_bundle/adapter_model.safetensors` |
+
+Training summary:
+
+- 481 accepted transcript-conditioned clips
+- 385 train clips
+- 1000 optimizer steps
+- about 2.6 train-set passes
+- 384x384, 56-frame cache
+
+## Repo Structure
+
+```text
+.
+├── README.md
+├── docs/
+│   └── demo.jpg
+├── modal_h3_avatar.py
+├── ui/
+│   └── h3_avatar_ui.py
+├── models/
+│   └── locked/
+│       ├── README.md
+│       └── h3-avatar-audio-v2-step1000.pt
+└── partner_bundle/
+    ├── README.md
+    ├── adapter_config.json
+    ├── adapter_model.safetensors
+    ├── inference_config.json
+    └── sample_prompt.json
+```
+
+## Run The Local UI
 
 ```bash
 H3_WARM_ENDPOINT_URL=https://aquin--h3-avatar-warm-generate.modal.run \
 python3 ui/h3_avatar_ui.py
-open http://127.0.0.1:8787
 ```
 
-The UI is intentionally simple:
+Then open:
 
-- reference image
-- dialogue
-- direction
-- background
+```text
+http://127.0.0.1:8787
+```
 
-Everything else is locked to the selected model recipe.
-
-## Modal Reference Deployment
+## Deploy The Reference Modal Endpoint
 
 ```bash
 modal deploy modal_h3_avatar.py
 ```
 
-The deployed endpoint currently expects the local UI to send a 512px reference video as base64 and returns the generated MP4 as base64.
-
 Current deployed endpoint:
 
-`https://aquin--h3-avatar-warm-generate.modal.run`
-
-## Partner Hosting Notes
-
-For Reactor/fal/another inference partner, use `partner_bundle/`.
-
-The expected production setup is a dedicated hosted model variant, not arbitrary dynamic LoRA upload per request:
-
 ```text
-base MiniMax-H3 Ref2VA + h3-avatar-audio-v2 adapter
+https://aquin--h3-avatar-warm-generate.modal.run
 ```
 
-Recommended product modes:
+The Modal path is a reference implementation. Production hosting should use a dedicated inference provider that keeps the base H3 model hot.
 
-- Preview: 5 seconds, fewer steps if the host supports a fast path.
-- Final: 10 seconds, 30 steps or host-optimized equivalent.
+## Partner Bundle
 
-Runtime compatibility matters more than file size. The adapter is small; the heavy part is serving the H3 base model efficiently.
+Use `partner_bundle/` for Reactor, fal, or another hosting partner.
+
+Expected hosted model:
+
+```text
+MiniMax-H3 Ref2VA + h3-avatar-audio-v2 LoRA
+```
+
+Recommended endpoint inputs:
+
+```json
+{
+  "reference_image": "...",
+  "dialogue": "Hey Chandan, wassup yaar, how are you doing these days?",
+  "direction": "The same character faces the camera with natural voice and synchronized mouth movement.",
+  "background": "in a clean studio with soft cinematic lighting"
+}
+```
+
+The adapter is small; the serving challenge is keeping the H3 base model loaded and optimized.
