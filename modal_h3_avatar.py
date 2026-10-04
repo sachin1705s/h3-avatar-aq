@@ -139,8 +139,7 @@ class H3AvatarGenerator:
         self.loaded_checkpoint = str(ckpt)
         self.missing_key_count = len(missing)
 
-    @modal.method()
-    def generate(self, payload: dict) -> dict:
+    def _generate_payload(self, payload: dict) -> dict:
         import base64
         import uuid
 
@@ -227,8 +226,162 @@ class H3AvatarGenerator:
             response["video_b64"] = base64.b64encode(out.read_bytes()).decode("ascii")
         return response
 
+    @modal.fastapi_endpoint(method="POST", label="h3-avatar-warm-generate", docs=True)
+    def generate(self, payload: dict) -> dict:
+        try:
+            return self._generate_payload(payload)
+        except Exception as exc:
+            return {
+                "state": "error",
+                "error": type(exc).__name__,
+                "detail": str(exc),
+            }
+
+    @modal.method()
+    def generate_remote(self, payload: dict) -> dict:
+        return self._generate_payload(payload)
+
 
 @app.function(image=image, volumes=VOLS, cpu=2.0, memory=4096, timeout=4 * 60 * 60)
-@modal.fastapi_endpoint(method="POST", label="h3-avatar-warm-generate", docs=True)
-def generate_ref2va_warm_endpoint(payload: dict) -> dict:
-    return H3AvatarGenerator().generate.remote(payload)
+def generate_ref2va_sample(
+    checkpoint: str = LOCKED_CHECKPOINT,
+    reference_video: str = "",
+    output_path: str = "/runs/generated/ui/generated.mp4",
+    prompt: str = "The same character faces the camera and speaks with an audible natural voice.",
+    num_frames: int = 243,
+    height: int = 512,
+    width: int = 512,
+    num_inference_steps: int = 30,
+    seed: int = 1500,
+    include_reference_audio: bool = False,
+    generate_audio: bool = True,
+) -> dict:
+    payload = {
+        "checkpoint": checkpoint,
+        "reference_video": reference_video,
+        "output_path": output_path,
+        "prompt": prompt,
+        "num_frames": num_frames,
+        "height": height,
+        "width": width,
+        "num_inference_steps": num_inference_steps,
+        "seed": seed,
+        "include_reference_audio": include_reference_audio,
+        "generate_audio": generate_audio,
+    }
+    return H3AvatarGenerator().generate_remote.remote(payload)
+
+
+@app.function(
+    image=image,
+    volumes=VOLS,
+    gpu="H100",
+    cpu=16.0,
+    memory=262144,
+    timeout=4 * 60 * 60,
+)
+def generate_ref2va_direct(
+    checkpoint: str = LOCKED_CHECKPOINT,
+    reference_video: str = "",
+    output_path: str = "/runs/generated/direct/generated.mp4",
+    prompt: str = "The same character faces the camera and speaks with an audible natural voice.",
+    num_frames: int = 124,
+    height: int = 512,
+    width: int = 512,
+    num_inference_steps: int = 12,
+    seed: int = 1500,
+    include_reference_audio: bool = False,
+    generate_audio: bool = True,
+) -> str:
+    import torch
+    from diffusers import ComponentsManager
+    from diffusers.modular_pipelines.minimax_h3 import MiniMaxH3Ref2VABlocks, MiniMaxH3Reference
+    from diffusers.utils.export_utils import encode_video
+    from peft import LoraConfig
+
+    ref = Path(reference_video)
+    out = Path(output_path)
+    if not ref.is_file():
+        raise RuntimeError(f"reference video missing: {ref}")
+    if checkpoint and checkpoint.lower() not in {"base", "none", "null"} and not Path(checkpoint).is_file():
+        raise RuntimeError(f"checkpoint missing: {checkpoint}")
+    out.parent.mkdir(parents=True, exist_ok=True)
+
+    manager = ComponentsManager()
+    pipe = MiniMaxH3Ref2VABlocks().init_pipeline("/cache/MiniMax-H3", components_manager=manager)
+    pipe.load_components(dtype=torch.bfloat16)
+    manager.enable_auto_cpu_offload(device="cuda", memory_reserve_margin="12GB")
+
+    transformer = getattr(pipe, "transformer_ref", None) or getattr(pipe, "transformer", None)
+    if transformer is None:
+        raise RuntimeError("No transformer_ref/transformer component found on pipeline")
+    try:
+        transformer.set_attention_backend("_flash_3_hub")
+    except Exception as exc:
+        print(f"flash attention backend not enabled: {exc}", flush=True)
+
+    missing_key_count = 0
+    if checkpoint and checkpoint.lower() not in {"base", "none", "null"}:
+        transformer.add_adapter(
+            LoraConfig(
+                r=16,
+                lora_alpha=32,
+                lora_dropout=0.0,
+                target_modules=["to_qkv", "to_out.0", "linear_1", "linear_2"],
+                init_lora_weights="gaussian",
+            )
+        )
+        state = torch.load(checkpoint, map_location="cpu", weights_only=False)
+        missing, unexpected = transformer.load_state_dict(state["model"], strict=False)
+        if unexpected:
+            raise RuntimeError(f"Unexpected LoRA keys: {unexpected[:5]}")
+        transformer.requires_grad_(False)
+        missing_key_count = len(missing)
+
+    reference_path = str(ref)
+    if not include_reference_audio:
+        reference_path = _strip_reference_audio(str(ref), str(out.parent))
+
+    print(
+        {
+            "checkpoint": checkpoint,
+            "reference_video": str(ref),
+            "output_path": str(out),
+            "num_frames": num_frames,
+            "height": height,
+            "width": width,
+            "num_inference_steps": num_inference_steps,
+            "seed": seed,
+            "generate_audio": generate_audio,
+            "missing_key_count": missing_key_count,
+        },
+        flush=True,
+    )
+
+    generator = torch.Generator(device="cpu").manual_seed(seed)
+    outputs = ["videos", "audio", "sampling_rate"] if generate_audio else ["videos"]
+    results = pipe(
+        prompt=prompt,
+        references=[MiniMaxH3Reference(video=reference_path)],
+        num_frames=num_frames,
+        height=height,
+        width=width,
+        num_inference_steps=num_inference_steps,
+        generator=generator,
+        output=outputs,
+    )
+
+    if generate_audio:
+        encode_video(
+            results["videos"][0],
+            fps=24,
+            output_path=str(out),
+            audio=results["audio"][0],
+            audio_sample_rate=results["sampling_rate"],
+        )
+    else:
+        encode_video(results["videos"][0], fps=24, output_path=str(out))
+
+    size = out.stat().st_size
+    print(f"wrote {out} ({size} bytes)", flush=True)
+    return str(out)

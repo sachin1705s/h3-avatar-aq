@@ -13,7 +13,7 @@ import time
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlparse
 from urllib.request import Request, urlopen
 
@@ -55,7 +55,7 @@ def post_json(url: str, payload: dict) -> dict:
             return json.loads(response.read().decode("utf-8"))
 
     try:
-        return send()
+        result = send()
     except (ssl.SSLCertVerificationError, URLError) as exc:
         is_cert_error = isinstance(exc, ssl.SSLCertVerificationError) or isinstance(
             getattr(exc, "reason", None),
@@ -67,12 +67,23 @@ def post_json(url: str, payload: dict) -> dict:
             import certifi
 
             context = ssl.create_default_context(cafile=certifi.where())
-            return send(context)
+            result = send(context)
         except Exception:
             context = ssl._create_unverified_context()
             result = send(context)
             result["ssl_warning"] = "Used local-dev unverified HTTPS fallback"
-            return result
+    except HTTPError as exc:
+        body = exc.read().decode("utf-8", "replace")
+        try:
+            payload = json.loads(body)
+            detail = payload.get("detail") or payload.get("error") or body
+        except Exception:
+            detail = body or str(exc)
+        raise RuntimeError(f"warm endpoint failed with HTTP {exc.code}: {detail}") from exc
+
+    if result.get("state") == "error" or result.get("error"):
+        raise RuntimeError(result.get("detail") or result.get("error") or "warm endpoint returned an error")
+    return result
 
 
 def parse_multipart(content_type: str, body: bytes) -> tuple[dict[str, str], dict[str, tuple[str, bytes]]]:
@@ -405,6 +416,9 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
+            return
+        if parsed.path == "/health":
+            self.send_json({"ok": True})
             return
         if parsed.path == "/api/status":
             job_id = parse_qs(parsed.query).get("id", [""])[0]

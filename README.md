@@ -4,6 +4,10 @@ Single-image talking-avatar generation powered by a locked MiniMax-H3 Ref2VA LoR
 
 ![H3 Avatar demo frame](docs/demo.jpg)
 
+## About
+
+H3 Avatar turns one character image plus a short line of dialogue into a talking avatar clip with model-generated speech, synchronized mouth movement, subtle head motion, and controllable scene direction. The repo packages the locked LoRA, a simple local UI, a Modal reference endpoint, and a partner-ready adapter bundle for warm production hosting.
+
 ## Product Shape
 
 The app takes:
