@@ -6,7 +6,7 @@ Single-image talking-avatar generation powered by a locked MiniMax-H3 Ref2VA LoR
 
 ## About
 
-H3 Avatar turns one character image plus a short line of dialogue into a talking avatar clip with model-generated speech, synchronized mouth movement, subtle head motion, and controllable scene direction. The repo packages the locked LoRA, a simple local UI, a Modal reference endpoint, and a partner-ready adapter bundle for warm production hosting.
+H3 Avatar turns one character image plus a short line of dialogue into a talking avatar clip with model-generated speech, synchronized mouth movement, subtle head motion, and controllable scene direction. The repo packages the locked LoRA, local UI, Modal reference serving, partner-ready adapter bundle, training code, eval reports, benchmark dashboards, and AQ/AQIT integration notes.
 
 ## Product Shape
 
@@ -44,9 +44,33 @@ Training summary:
 ```text
 .
 ├── README.md
+├── aq/
+│   └── README.md
+├── aqit/
+│   ├── README.md
+│   └── probes/
+├── benchmarks/
+│   └── *.md / *.html / *.csv
+├── configs/
+│   └── training and Modal configs
+├── datasets/
+│   └── dataset source notes
 ├── docs/
 │   └── demo.jpg
+├── evals/
+│   └── eval prompts and gates
 ├── modal_h3_avatar.py
+├── recipe.yaml
+├── recipes/
+│   └── training recipes
+├── scripts/
+│   └── eval, reporting, and dataset helpers
+├── tools/
+│   └── H3 Ref2VA helpers
+├── training/
+│   ├── README.md
+│   ├── prepare_cache.py
+│   └── train.py
 ├── ui/
 │   └── h3_avatar_ui.py
 ├── models/
@@ -60,6 +84,16 @@ Training summary:
     ├── inference_config.json
     └── sample_prompt.json
 ```
+
+## Training And Evaluation
+
+- Training code: `training/`
+- Recipes: `recipes/`
+- Configs: `configs/`
+- Eval prompts and gates: `evals/`
+- Benchmark reports and dashboards: `benchmarks/`
+- AQ handoff: `aq/README.md` and `recipe.yaml`
+- AQIT checkpoint inspection notes: `aqit/README.md`
 
 ## Run The Local UI
 
